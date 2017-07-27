@@ -14,6 +14,9 @@
     "stripInternal": true,
     "noEmitHelpers": false,
     "target": "es2017",
+    "types": [
+      "node"
+    ],
     "lib": [
       "esnext"
     ],
