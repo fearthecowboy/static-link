@@ -1,0 +1,35 @@
+{
+  "name": "$$PACKAGENAME$$",
+  "version": "1.0.0",
+  "description": "$$PACKAGEDESCRIPTION$$",
+  "main": "main.js",
+  "scripts": {
+    "test": "tsc -p . & mocha dist/test",
+    "start": "node dist/app",
+    "watch": "tsc -p . -w",
+    "compile": "tsc -p .",
+    "restore": "shx rm package-lock.json & shx rm -rf ./node_modules/ & npm install",
+    "clean": "shx rm -rf dist"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/$$USER$$/$$PROJECT$$.git"
+  },
+  "keywords": [
+    "$$KEYWORD$$"
+  ],
+  "author": "Us.",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/$$USER$$/$$PROJECT$$/issues"
+  },
+  "homepage": "https://github.com/$$USER$$/$$PROJECT$$#readme",
+  "devDependencies": {
+    "@types/node": "*",
+    "mocha": "3.4.2",
+    "mocha-typescript": "^1.1.7",
+    "shx": "^0.2.2",
+    "source-map-support": "0.4.15",
+    "typescript": "2.4.2"
+  }
+}
