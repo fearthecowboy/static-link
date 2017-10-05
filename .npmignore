@@ -1,0 +1,16 @@
+!dist/
+test/
+dist/test/
+lib/
+dist/package/
+package/
+.npmignore
+.vscode/
+tsconfig.json
+*.js.map
+*.ts
+*.tgz
+*.tar
+!dist/*.d.ts
+!dist/lib/*.d.ts
+.scripts/

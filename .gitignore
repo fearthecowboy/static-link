@@ -292,3 +292,4 @@ __pycache__/
 *.d.ts
 package-lock.json
 **/package-lock.json
+dist/

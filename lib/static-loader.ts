@@ -1,0 +1,169 @@
+// this file gets dropped into the target application
+// should be referenced from any entrypoint with something like:
+// require ("./static-loader").LoadFileSystem("xxx")
+// @modules 
+
+import * as fs from 'fs'
+import { patchModuleLoader } from "./patch-moduleloader";
+import { StaticFilesystem } from "./static-filesystem";
+import { patchFilesystem } from "./patch-filesystem";
+import { select } from "./common";
+import { resolve } from 'path';
+import { realpathSync } from 'fs';
+import * as child_process from "child_process";
+const Module = require("module");
+
+if (require.main === module) {
+  // this is for "fork mode" where we are forking a child process.
+  // the first parameter should be this file.
+  // the following parameter should be the static module file.
+  const startpath = realpathSync(module.filename);
+  for (let i = 0; i < process.argv.length; i++) {
+    if (realpathSync(process.argv[i]) === startpath) {
+      process.argv.splice(i, 1);
+      while (i < process.argv.length && process.argv[i].startsWith("--load-module=")) {
+        const staticModule = process.argv[i].split("=")[1];
+        process.argv.splice(i, 1);
+        load(staticModule);
+      }
+
+      // load the main module as if it were the real deal
+      Module._load(process.argv[1], null, true);
+      // Handle any nextTicks added in the first tick of the program
+      (<any>process)._tickCallback();
+      break;
+    }
+  }
+}
+
+const possibilities = [
+  'node',
+  'node.exe',
+  process.execPath,
+  process.argv[0]
+];
+
+function isNode(path: string): boolean {
+  return possibilities.indexOf(path) > -1 ? true : false;
+}
+
+function indexAfterStartsWith(command: string, text: string): number {
+  return command.startsWith(text) ? text.length : -1;
+}
+
+function startsWithNode(command: string): number {
+  if (command.charAt(0) == '"') {
+    // check includes quotes
+    for (const each of possibilities) {
+      const val = indexAfterStartsWith(command, `"${each}" `);
+      if (val > -1) {
+        return val
+      }
+    }
+  } else {
+    for (const each of possibilities) {
+      const val = indexAfterStartsWith(command, `${each} `);
+      if (val > -1) {
+        return val
+      }
+    }
+  }
+  return -1;
+}
+
+function getInsertedArgs(loadedFileSystems: Array<string>): Array<string> {
+  return select<string>(loadedFileSystems, (p, c) => `--load-module=${c}`);
+}
+
+function getInsertedArgString(loadedFileSystems: Array<string>): string {
+  return `${getInsertedArgs(loadedFileSystems).map((a) => `\"${a}\"`).join(' ')}`;
+}
+
+export function load(staticModule: string) {
+  if (!(<any>require).undo) {
+    const svs = new StaticFilesystem(true);
+    // first patch the require 
+    (<any>require).undo = patchModuleLoader(svs);
+    (<any>require).staticfilesystem = svs;
+
+    // hot-patch process.exit so that when it's called we shutdown the patcher early
+    // can't just use the event because it's not early enough
+    const process_exit = process.exit;
+    process.exit = (n): never => {
+      // unlocks the files.
+      svs.shutdown();
+
+      // remove the patching
+      (<any>require).undo();
+
+      // keep going
+      return process_exit(n);
+    }
+
+    const fork = child_process.fork;
+    const spawn = child_process.spawn;
+    const exec = child_process.exec;
+
+    const spawnSync = child_process.spawnSync;
+    const execSync = child_process.execSync;
+
+    // hot-patch fork so we can make child processes work too.
+    (<any>child_process).fork = (modulePath: string, args?: string[], options?: child_process.ForkOptions): child_process.ChildProcess => {
+      if (args) {
+        return fork(__filename, [...getInsertedArgs(svs.loadedFileSystems), modulePath, ...Array.isArray(args) ? args : [args]], options)
+      } else {
+        return fork(__filename, args, options);
+      }
+    }
+
+    // hot-patch spawn so we can patch if you're actually calling node.
+    (<any>child_process).spawn = (command: string, args?: string[], options?: child_process.SpawnOptions): child_process.ChildProcess => {
+      if (args && (Array.isArray(args) || typeof args !== 'object') && isNode(command)) {
+        return (<any>spawn)(command, [__filename, ...getInsertedArgs(svs.loadedFileSystems), ...Array.isArray(args) ? args : [args]], options);
+      }
+      return (<any>spawn)(command, args, options);
+    }
+
+    (<any>child_process).spawnSync = (command: string, args?: string[], options?: child_process.SpawnOptions): child_process.ChildProcess => {
+      if (args && (Array.isArray(args) || typeof args !== 'object') && isNode(command)) {
+        return (<any>spawnSync)(command, [__filename, ...getInsertedArgs(svs.loadedFileSystems), ...Array.isArray(args) ? args : [args]], options);
+      }
+      return (<any>spawnSync)(command, args, options);
+    }
+
+    (<any>child_process).exec = (command: string, options, callback): child_process.ChildProcess => {
+      const pos = startsWithNode(command);
+      if (pos > -1) {
+        return (<any>exec)(`${command.substring(0, pos)} "${__filename}" ${getInsertedArgString(svs.loadedFileSystems)} ${command.substring(pos)}`, options, callback);
+      }
+      // console.log(`exec ${command} ${JSON.stringify({ options }, null, "  ")}`);
+      return (<any>exec)(command, options, callback);
+    }
+
+    (<any>child_process).execSync = (command: string, options): child_process.ChildProcess => {
+      const pos = startsWithNode(command);
+      if (pos > -1) {
+        return (<any>execSync)(`${command.substring(0, pos)} "${__filename}" ${getInsertedArgString(svs.loadedFileSystems)} ${command.substring(pos)}`, options);
+      }
+      // console.log(`execSync ${command} ${JSON.stringify({ options }, null, "  ")}`);
+      return (<any>execSync)(command, options);
+    }
+  }
+  (<any>require).staticfilesystem.load(staticModule);
+}
+
+
+export function unload(staticModule: string) {
+  if ((<any>require).undo) {
+    const svs = (<StaticFilesystem>((<any>require).staticfilesystem));
+    svs.unload(staticModule);
+  }
+}
+// @impls 
+/*
+
+// subsequent loading:
+if ((<any>global).StaticVolumeSet) {
+  (<any>global).StaticVolumeSet.addFileSystem(`${__dirname}/static_modules.fs`)
+}
+*/

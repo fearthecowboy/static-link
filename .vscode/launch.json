@@ -25,6 +25,16 @@
       "outFiles": [
         "${workspaceRoot}/dist/**/*.js"
       ]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "go",
+      "program": "${workspaceRoot}/dist/main",
+      "args": [],
+      "outFiles": [
+        "${workspaceRoot}/dist/**/*.js"
+      ]
     }
   ]
 }

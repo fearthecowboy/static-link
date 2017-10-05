@@ -1,35 +1,45 @@
 {
-  "name": "$$PACKAGENAME$$",
+  "name": "static-link",
   "version": "1.0.0",
-  "description": "$$PACKAGEDESCRIPTION$$",
+  "description": "A static file system implementation for where many files are embedded in a single file system",
   "main": "main.js",
   "scripts": {
-    "test": "tsc -p . & mocha dist/test",
+    "test": "tsc & mocha dist/test",
     "start": "node dist/app",
     "watch": "tsc -p . -w",
-    "compile": "tsc -p .",
+    "compile": "tsc  & node ./.scripts/rewrite-loader.js & uglifyjs --beautify \"beautify=true,indent_level=2\" ./dist/lib/static-loader.js -o ./dist/lib/static-loader.js",
+    "_prepare": "tsc  & node ./.scripts/rewrite-loader.js & uglifyjs -c ./dist/lib/static-loader.js -o ./dist/lib/static-loader.js",
     "restore": "shx rm package-lock.json & shx rm -rf ./node_modules/ & npm install",
-    "clean": "shx rm -rf dist"
+    "clean": "shx rm -rf dist",
+    "unpack": "gzip -dc *.tgz | tar xv"
+  },
+  "bin": {
+    "static-link": "dist/static-link.js"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/$$USER$$/$$PROJECT$$.git"
+    "url": "git+https://github.com/fearthecowboy/staticfs.git"
   },
   "keywords": [
-    "$$KEYWORD$$"
+    "fs-monkey",
+    "staticfs",
+    "filesystem"
   ],
-  "author": "Us.",
+  "author": "Garrett Serack",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/$$USER$$/$$PROJECT$$/issues"
+    "url": "https://github.com/fearthecowboy/staticfs/issues"
   },
-  "homepage": "https://github.com/$$USER$$/$$PROJECT$$#readme",
+  "homepage": "https://github.com/fearthecowboy/staticfs#readme",
   "devDependencies": {
     "@types/node": "*",
+    "uglify-es": "^3.1.2",
     "mocha": "3.4.2",
     "mocha-typescript": "^1.1.7",
     "shx": "^0.2.2",
     "source-map-support": "0.4.15",
-    "typescript": "2.4.2"
-  }
+    "typescript": "2.5.2",
+    "yarn": "^1.1.0"
+  },
+  "dependencies": {}
 }
