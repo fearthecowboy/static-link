@@ -44,16 +44,16 @@ The `static-link` section has several options for controlling the process:
 
 ```js
 ...
-  static-link : {
-    dependencies : {
+  "static-link" : {
+    "dependencies" : {
       // specify all your static package dependencies here
     },
-    entrypoints : [
+    "entrypoints" : [
       // specify the entrypoints to your code here. 
       // This will default to anything in "main" or "bin" or the root "index.js" file
     ],
-    loader: "./dist/static-loader.js", // the filename to copy the static loader code to.
-    filesystem: "./dist/static_modules.fs" // the filename to create the static modules filesystem
+    "loader": "./dist/static-loader.js", // the filename to copy the static loader code to.
+    "filesystem": "./dist/static_modules.fs" // the filename to create the static modules filesystem
   }
 
 ```
