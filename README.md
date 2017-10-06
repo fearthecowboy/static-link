@@ -36,6 +36,10 @@ Then run `npm run static-link` and it will:
 - copy the `static-loader.js` file to the `./dist/` folder
 - patch all entrypoints with the static loader so that it is enabled from any entrypoint.
 
+It will skip the package install generation if the static-modules file is created and `package.json` hasn't changed.
+
+Use `--force` to do it anyway.
+
 
 # Advanced Options
 
