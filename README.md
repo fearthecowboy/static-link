@@ -42,7 +42,7 @@ Then run `npm run static-link` and it will:
 The `static-link` section has several options for controlling the process:
 
 
-```json
+```js
 ...
   static-link : {
     dependencies : {
