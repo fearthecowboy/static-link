@@ -1,17 +1,17 @@
 {
   "name": "static-link",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A static file system implementation for where many files are embedded in a single file system",
   "main": "main.js",
   "scripts": {
-    "test": "tsc & mocha dist/test",
+    "test": "tsc && mocha dist/test",
     "start": "node dist/app",
     "watch": "tsc -p . -w",
-    "compile": "tsc  & node ./.scripts/rewrite-loader.js & uglifyjs --beautify \"beautify=true,indent_level=2\" ./dist/lib/static-loader.js -o ./dist/lib/static-loader.js",
-    "_prepare": "tsc  & node ./.scripts/rewrite-loader.js & uglifyjs -c ./dist/lib/static-loader.js -o ./dist/lib/static-loader.js",
-    "restore": "shx rm package-lock.json & shx rm -rf ./node_modules/ & npm install",
+    "compile": "tsc  && node ./.scripts/rewrite-loader.js && uglifyjs --beautify \"beautify=true,indent_level=2\" ./dist/lib/static-loader.js -o ./dist/lib/static-loader.js",
+    "_prepare": "tsc  && node ./.scripts/rewrite-loader.js && uglifyjs -c ./dist/lib/static-loader.js -o ./dist/lib/static-loader.js",
+    "restore": "shx rm package-lock.json && shx rm -rf ./node_modules/ && npm install",
     "clean": "shx rm -rf dist",
-    "reinstall": "rmdir /s /q node_modules 2> nul & erase  package-lock.json 2> nul & erase yarn.lock 2> nul  & npm install",
+    "reinstall": "rmdir /s /q node_modules 2> nul && erase  package-lock.json 2> nul && erase yarn.lock 2> nul  && npm install",
     "unpack": "gzip -dc *.tgz | tar xv"
   },
   "bin": {
@@ -19,19 +19,21 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/fearthecowboy/staticfs.git"
+    "url": "git+https://github.com/fearthecowboy/static-link.git"
   },
   "keywords": [
-    "fs-monkey",
-    "staticfs",
+    "patchRequire",
+    "static",
+    "linker",
+    "link",
     "filesystem"
   ],
   "author": "Garrett Serack",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/fearthecowboy/staticfs/issues"
+    "url": "https://github.com/fearthecowboy/static-link/issues"
   },
-  "homepage": "https://github.com/fearthecowboy/staticfs#readme",
+  "homepage": "https://github.com/fearthecowboy/static-link#readme",
   "devDependencies": {
     "@types/node": "*",
     "uglify-es": "^3.1.2",
