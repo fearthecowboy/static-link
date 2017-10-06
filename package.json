@@ -1,7 +1,7 @@
 {
   "name": "static-link",
-  "version": "0.1.1",
-  "description": "A static file system implementation for where many files are embedded in a single file system",
+  "version": "0.1.2",
+  "description": "This utility provides a means to statically-link all your dependencies into a single static-filesystem that is patched into node's module loader.",
   "main": "main.js",
   "scripts": {
     "test": "tsc && mocha dist/test",
