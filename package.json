@@ -1,6 +1,6 @@
 {
   "name": "static-link",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "A static file system implementation for where many files are embedded in a single file system",
   "main": "main.js",
   "scripts": {
@@ -11,6 +11,7 @@
     "_prepare": "tsc  & node ./.scripts/rewrite-loader.js & uglifyjs -c ./dist/lib/static-loader.js -o ./dist/lib/static-loader.js",
     "restore": "shx rm package-lock.json & shx rm -rf ./node_modules/ & npm install",
     "clean": "shx rm -rf dist",
+    "reinstall": "rmdir /s /q node_modules 2> nul & erase  package-lock.json 2> nul & erase yarn.lock 2> nul  & npm install",
     "unpack": "gzip -dc *.tgz | tar xv"
   },
   "bin": {

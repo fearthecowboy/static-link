@@ -75,8 +75,14 @@ interface StaticLinkConfiguration {
 }
 
 async function yarnInstall(directory: string, pkgs: Array<string>) {
-  const output = await execute(`${__dirname}/../node_modules/yarn/bin/yarn add --json ${pkgs.map((a) => `"${a}"`).join(' ')}`, { cwd: directory });
-  // console.log(output.stdout);
+  const c = `${__dirname}/../node_modules/yarn/bin/yarn add --json ${pkgs.map((a) => `"${a}"`).join(' ')}`;
+  if (debug) {
+    console.log(c);
+  }
+  const output = await execute(c, { cwd: directory });
+  if (debug) {
+    console.log(output.stdout);
+  }
   if (output.error) {
     throw Error(`Failed to install package '${pkgs}' -- ${output.error}`);
   }
@@ -126,11 +132,14 @@ async function backup(filename: string): Promise<() => void> {
   }
 }
 
+const debug = getArg("debug") == true;
+
 async function main() {
   // load package.json
 
   const pkgfile = resolve(getArg("input") || "./package.json");
   const force = getArg("force") == true;
+
 
   if (!(await isFile(pkgfile))) {
     return help("Unknown or missing project.json file.");
@@ -168,11 +177,18 @@ async function main() {
             }
           } catch { }
         }
-        if (typeof pkgJson.bin === 'string') {
-          config.entrypoints.push(pkgJson.bin);
-        }
-        if (Array.isArray(pkgJson.bin)) {
-          config.entrypoints.push(...pkgJson.bin);
+        if (pkgJson.bin) {
+          if (typeof pkgJson.bin === 'string') {
+            config.entrypoints.push(pkgJson.bin);
+          } else {
+            for (const ep in pkgJson.bin) {
+              const entrypoint = pkgJson.bin[ep];
+              if (config.entrypoints.indexOf(entrypoint) == -1) {
+                config.entrypoints.push(entrypoint);
+              }
+            }
+
+          }
         }
       }
     }
@@ -201,32 +217,32 @@ async function main() {
     // patch the entrypoints
     for (const each of config.entrypoints) {
       const entrypoint = resolve(basefolder, each);
-      let loaderPath = relative(dirname(entrypoint), config.loader).replace(/\\/g, "/");
-      if (loaderPath.charAt(0) != '.') {
-        loaderPath = `./${loaderPath}`;
-      }
-      let fsPath = relative(dirname(entrypoint), config.filesystem).replace(/\\/g, "/");
-      if (fsPath.charAt(0) != '.') {
-        fsPath = `./${fsPath}`;
-      }
-      let content = <string>await readFile(entrypoint, { encoding: "utf8" });
-      const patchLine = `require('${loaderPath}').load('${fsPath}')\n`;
-      let prefix = "";
-      if (content.indexOf(patchLine) == -1 || force) {
-        const rx = /^#!.*$/gm.exec(content);
-        if (rx && rx.index == 0) {
-          prefix = `${rx[0]}\n`;
-          // remove prefix
-          content = content.replace(prefix, "");
+      if (await isFile(entrypoint)) {
+        let loaderPath = relative(dirname(entrypoint), config.loader).replace(/\\/g, "/");
+        if (loaderPath.charAt(0) != '.') {
+          loaderPath = `./${loaderPath}`;
         }
-        // strip existing loader
-        content = content.replace(/^require.*static-loader.js.*$/gm, "");
-        content = content.replace(/\/\/ load static module: .*$/gm, "");
-        content = content.trim();
-        content = `${prefix}// load static module: ${fsPath}\n${patchLine}\n${content}`
+        let fsPath = relative(dirname(entrypoint), config.filesystem).replace(/\\/g, "/");
+        fsPath = `\${__dirname }/${fsPath}`;
+        let content = <string>await readFile(entrypoint, { encoding: "utf8" });
+        const patchLine = `require('${loaderPath}').load(\`${fsPath}\`)\n`;
+        let prefix = "";
+        if (content.indexOf(patchLine) == -1 || force) {
+          const rx = /^#!.*$/gm.exec(content);
+          if (rx && rx.index == 0) {
+            prefix = `${rx[0]}\n`;
+            // remove prefix
+            content = content.replace(prefix, "");
+          }
+          // strip existing loader
+          content = content.replace(/^require.*static-loader.js.*$/gm, "");
+          content = content.replace(/\/\/ load static module: .*$/gm, "");
+          content = content.trim();
+          content = `${prefix}// load static module: ${fsPath}\n${patchLine}\n${content}`
 
-        console.log(`> Patching Entrypoint: ${entrypoint}`);
-        await writeFile(entrypoint, content);
+          console.log(`> Patching Entrypoint: ${entrypoint}`);
+          await writeFile(entrypoint, content);
+        }
       }
     }
 

@@ -79,6 +79,58 @@ function getInsertedArgString(loadedFileSystems: Array<string>): string {
   return `${getInsertedArgs(loadedFileSystems).map((a) => `\"${a}\"`).join(' ')}`;
 }
 
+function padStart(str: string, targetLength: number, padString: string = ' ') {
+  targetLength = targetLength >> 0; //floor if number or convert non-number to 0;
+  padString = String(padString || ' ');
+  if (str.length > targetLength) {
+    return String(str);
+  }
+  else {
+    targetLength = targetLength - str.length;
+    if (targetLength > padString.length) {
+      padString += padString.repeat(targetLength / padString.length); //append to original to ensure we are longer than needed
+    }
+    return padString.slice(0, targetLength) + String(str);
+  }
+};
+
+function padEnd(str: string, targetLength: number, padString: string = ' ') {
+  targetLength = targetLength >> 0; //floor if number or convert non-number to 0;
+  padString = String(padString || ' ');
+  if (str.length > targetLength) {
+    return String(str);
+  }
+  else {
+    targetLength = targetLength - str.length;
+    if (targetLength > padString.length) {
+      padString += padString.repeat(targetLength / padString.length); //append to original to ensure we are longer than needed
+    }
+    return String(str) + padString.slice(0, targetLength);
+  }
+};
+
+export function list(staticModule: string) {
+  const svs = new StaticFilesystem(true);
+  svs.load(staticModule);
+  const dir = new Array<any>();
+  const files = {};
+  for (const each of svs.entries) {
+    const st = svs.statSync(each);
+    if (!st.isFile()) {
+      dir.push(`${padStart('<dir>', 12)}   ${each}`);
+    } else {
+      files[each] = `${padStart(`${st.size}`, 12)}   ${each}`;;
+    }
+  }
+  for (const each of dir.sort()) {
+    console.log(each);
+  }
+  for (const each of Object.keys(files).sort()) {
+    console.log(files[each]);
+  }
+  svs.shutdown();
+}
+
 export function load(staticModule: string) {
   if (!(<any>require).undo) {
     const svs = new StaticFilesystem(true);

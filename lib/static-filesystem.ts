@@ -1,4 +1,4 @@
-import { dirname } from 'path';
+import { dirname, resolve } from 'path';
 import { constants } from 'os';
 import * as filesystem from 'fs';
 
@@ -168,6 +168,13 @@ export class StaticFilesystem {
   }
 
   public load(sourcePath: string): StaticFilesystem {
+    sourcePath = resolve(sourcePath);
+    for (let i = 0; i < this.fileSystems.length; i++) {
+      if (this.fileSystems[i].sourcePath === sourcePath) {
+        // already loaded?
+        return this;
+      }
+    }
     this.fileSystems.push(new StaticVolumeFile(sourcePath));
     return this;
   }
@@ -183,6 +190,8 @@ export class StaticFilesystem {
   }
 
   public unload(sourcePath: string): StaticFilesystem {
+    sourcePath = resolve(sourcePath);
+
     for (let i = 0; i < this.fileSystems.length; i++) {
       if (this.fileSystems[i].sourcePath === sourcePath) {
         this.fileSystems[i].shutdown();
