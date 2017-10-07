@@ -72,7 +72,7 @@ function startsWithNode(command: string): number {
 }
 
 function getInsertedArgs(loadedFileSystems: Array<string>): Array<string> {
-  return select<string>(loadedFileSystems, (p, c) => `--load-module=${c}`);
+  return select(loadedFileSystems, (p, c) => `--load-module=${c}`);
 }
 
 function getInsertedArgString(loadedFileSystems: Array<string>): string {
@@ -110,7 +110,7 @@ function padEnd(str: string, targetLength: number, padString: string = ' ') {
 };
 
 export function list(staticModule: string) {
-  const svs = new StaticFilesystem(true);
+  const svs = new StaticFilesystem();
   svs.load(staticModule);
   const dir = new Array<any>();
   const files = {};
@@ -133,9 +133,9 @@ export function list(staticModule: string) {
 
 export function load(staticModule: string) {
   if (!(<any>require).undo) {
-    const svs = new StaticFilesystem(true);
+    const svs = new StaticFilesystem();
     // first patch the require 
-    (<any>require).undo = patchModuleLoader(svs);
+    (<any>require).undo = patchModuleLoader(svs, true);
     (<any>require).staticfilesystem = svs;
 
     // hot-patch process.exit so that when it's called we shutdown the patcher early
@@ -204,7 +204,6 @@ export function load(staticModule: string) {
   (<any>require).staticfilesystem.load(staticModule);
 }
 
-
 export function unload(staticModule: string) {
   if ((<any>require).undo) {
     const svs = (<StaticFilesystem>((<any>require).staticfilesystem));
@@ -212,10 +211,3 @@ export function unload(staticModule: string) {
   }
 }
 // @impls 
-/*
-
-// subsequent loading:
-if ((<any>global).StaticVolumeSet) {
-  (<any>global).StaticVolumeSet.addFileSystem(`${__dirname}/static_modules.fs`)
-}
-*/

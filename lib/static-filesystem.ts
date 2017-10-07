@@ -5,7 +5,7 @@ import * as filesystem from 'fs';
 // shallow copy original function implementations before we start tweaking.
 const fs = { ...filesystem };
 
-import { readdir, stat, open, close, write, read, readFile, INTSIZE, unixifyPath } from "./common"
+import { readdir, stat, open, close, write, read, readFile, INTSIZE, unixifyPath, select, selectMany, first } from "./common"
 
 interface Index {
   [filepath: string]: filesystem.Stats;
@@ -157,14 +157,10 @@ export class StaticFilesystem {
   }
 
   public get hashes(): Array<string> {
-    const result = new Array<string>();
-    for (const fsystem of this.fileSystems) {
-      result.push(fsystem.hash);
-    }
-    return result;
+    return select(this.fileSystems, (p, c, i, a) => c.hash);
   }
 
-  public constructor(private fallbackToDisk: boolean = false) {
+  public constructor() {
   }
 
   public load(sourcePath: string): StaticFilesystem {
@@ -180,13 +176,7 @@ export class StaticFilesystem {
   }
 
   public get loadedFileSystems(): Array<string> {
-    const result = new Array<string>();
-
-    for (const fsystem of this.fileSystems) {
-      result.push(fsystem.sourcePath);
-    }
-
-    return result;
+    return select(this.fileSystems, (p, c) => c.sourcePath);
   }
 
   public unload(sourcePath: string): StaticFilesystem {
@@ -202,61 +192,21 @@ export class StaticFilesystem {
   }
 
   public get entries(): Array<string> {
-    const result = new Array<string>();
-
-    for (const fsystem of this.fileSystems) {
-      result.push(...Object.keys(fsystem.index));
-    }
-
-    return result;
+    return selectMany(this.fileSystems, (p, c) => Object.keys(c.index));
   }
-
 
   public readFileSync(filepath: string, options?: { encoding?: string | null; flag?: string; } | string | null): string | Buffer {
     const targetPath: string = unixifyPath(filepath);
-
-    for (const fsystem of this.fileSystems) {
-      const result = fsystem.readFile(targetPath, options);
-      if (result != undefined) {
-        return result;
-      }
-    }
-
-    if (this.fallbackToDisk) {
-      // console.trace(`readFileSync: ${filepath}`);
-      return fs.readFileSync(filepath, options);
-    }
-
-    throw this.NewError(constants.errno.ENOENT, "readFileSync", filepath);
+    return <string>first(this.fileSystems, (fsystem) => fsystem.readFile(targetPath, options), () => { throw this.NewError(constants.errno.ENOENT, "readFileSync", filepath) });
   }
 
   public realpathSync(filepath: string): string {
     const targetPath: string = unixifyPath(filepath);
-    for (const fsystem of this.fileSystems) {
-      if (fsystem.index[targetPath]) {
-        return targetPath;
-      }
-    }
-    return fs.realpathSync(filepath);
+    return <string>first(this.fileSystems, (fsystem) => fsystem.index[targetPath] ? targetPath : undefined, () => { throw this.NewError(constants.errno.ENOENT, "realpathSync", filepath) });
   };
 
   public statSync(filepath: string): filesystem.Stats {
     const targetPath: string = unixifyPath(filepath);
-
-    for (const fsystem of this.fileSystems) {
-      const result = fsystem.index[targetPath];
-      if (result) {
-        return result;
-      }
-    }
-
-    if (this.fallbackToDisk) {
-      //console.trace(`statSync: ${filepath}`);
-      return fs.statSync(filepath);
-    }
-
-    throw this.NewError(constants.errno.ENOENT, "statSync", filepath);
+    return <filesystem.Stats>first(this.fileSystems, (fsystem) => fsystem.index[targetPath], () => { throw this.NewError(constants.errno.ENOENT, "statSync", filepath) });
   }
-
-
 }

@@ -63,7 +63,7 @@ import { patchModuleLoader, IReadOnlySynchronousFileSystem, StaticFilesystem } f
       assert.throws(() => require("semver"));
 
       // now mount the svs
-      const svs = new StaticFilesystem(false);
+      const svs = new StaticFilesystem();
       svs.load(`${__dirname}/output.fs`);
       const undo = patchModuleLoader(svs, true);
 

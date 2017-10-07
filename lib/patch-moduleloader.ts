@@ -142,7 +142,6 @@ export function patchModuleLoader(volume: IReadOnlySynchronousFileSystem, enable
       } catch (err) {
         throw { ...err, message: filename + ': ' + err.message }
       }
-
     }
   };
 

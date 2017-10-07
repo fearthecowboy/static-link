@@ -255,7 +255,20 @@ export function calculateHash(content: any): string {
   return createHash('sha256').update(JSON.stringify(content)).digest("base64");
 }
 
-export function select<T>(array, callbackfn: (accumulator: Array<T>, current: T, index: number, array: T[]) => T): Array<T> {
+export function select<T, V>(array: Array<V>, callbackfn: (accumulator: Array<T>, current: V, index: number, array: V[]) => T): Array<T> {
   return array.reduce((p, c, i, a) => { p.push(callbackfn(p, c, i, a)); return p }, new Array<T>());
 }
 
+export function selectMany<T, V>(array: Array<V>, callbackfn: (accumulator: Array<T>, current: V, index: number, array: V[]) => Array<T>): Array<T> {
+  return array.reduce((p, c, i, a) => { p.push(...callbackfn(p, c, i, a)); return p }, new Array<T>());
+}
+
+export function first<T, V>(array: Array<V>, selector: (current: V) => T | undefined, onError: () => undefined = () => undefined): T | undefined {
+  for (const each of array) {
+    const result = selector(each);
+    if (result != undefined) {
+      return result
+    }
+  }
+  return onError();
+}
