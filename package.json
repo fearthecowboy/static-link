@@ -1,6 +1,6 @@
 {
   "name": "static-link",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "This utility provides a means to statically-link all your dependencies into a single static-filesystem that is patched into node's module loader.",
   "main": "main.js",
   "scripts": {
