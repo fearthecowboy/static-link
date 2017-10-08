@@ -83,13 +83,15 @@ module.exports.doIt = doIt;
       assert.equal(m.stdout.indexOf("main-ok") > -1, true, "main-ok found");
       assert.equal(m.stdout.indexOf("main2-ok") > -1, true, "main2-ok found");
       assert.equal(m.stdout.indexOf("ignore platform checks") > -1, true, "yarn ran.");
+
+      // this test proves that 
+      /*
+        - one file can still load another in the same project (ie, passthru works).
+        - we can find a module in the static filesystem and can call exec on it.
+      */
     }
     finally {
-      // await rmdir(workingdir);
+      await rmdir(workingdir);
     }
-
-
-
-    assert.equal(true, true, "Basic Test Example");
   }
 }
