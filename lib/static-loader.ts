@@ -26,7 +26,10 @@ if (require.main === module) {
         process.argv.splice(i, 1);
         load(staticModule);
       }
-
+      if (process.argv.length < 2) {
+        console.log("Missing module name to start.");
+        process.exit(1);
+      }
       // load the main module as if it were the real deal
       Module._load(process.argv[1], null, true);
       // Handle any nextTicks added in the first tick of the program
