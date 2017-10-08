@@ -5,7 +5,7 @@ import * as fs from 'fs'
 
 import { StaticFilesystemCreator, StaticFilesystem, calculateHash } from "../main"
 
-@suite class AsyncIO {
+@suite class CreateStaticFile {
 
   dirR(path: string, result = new Array<string>()) {
     for (const each of fs.readdirSync(path)) {

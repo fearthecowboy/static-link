@@ -3,7 +3,7 @@ import { createHash } from "crypto";
 
 export const isWindows = process.platform === 'win32';
 
-import { dirname, normalize, join, resolve } from 'path';
+import { dirname, normalize, join, resolve, basename, extname } from 'path';
 import { constants } from 'os';
 import { exec, ExecOptions, ChildProcess } from "child_process";
 
@@ -271,4 +271,24 @@ export function first<T, V>(array: Array<V>, selector: (current: V) => T | undef
     }
   }
   return onError();
+}
+
+
+export async function backup(filename: string): Promise<() => void> {
+  if (!await isFile(filename)) {
+    // file doesn't exists, doesn't need restoring.
+    return async () => {
+      await rmFile(filename);
+    };
+  }
+  const backupFile = join(dirname(filename), `${basename(filename)}.${Math.random() * 10000}${extname(filename)}`);
+
+  // rename then copy preserves the file attributes when we restore.
+  await rename(filename, backupFile);
+  await copyFile(backupFile, filename);
+
+  return async () => {
+    await rmFile(filename);
+    await rename(backupFile, filename);
+  }
 }

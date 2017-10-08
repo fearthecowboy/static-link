@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { stat, execute, calculateHash, isFile, isDirectory, mkdir, rmdir, rmFile, rename, writeFile, copyFile, readFile } from "./lib/common";
+import { stat, execute, calculateHash, isFile, isDirectory, mkdir, rmdir, rmFile, rename, writeFile, copyFile, readFile, backup } from "./lib/common";
 import { resolve, dirname, join, basename, extname, relative } from "path";
 import { mkdtempSync, rmdirSync, unlinkSync } from "fs"
 import { tmpdir } from 'os';
@@ -113,24 +113,6 @@ function getArg(arg: string): boolean | string | undefined {
   return undefined;
 }
 
-async function backup(filename: string): Promise<() => void> {
-  if (!await isFile(filename)) {
-    // file doesn't exists, doesn't need restoring.
-    return async () => {
-      await rmFile(filename);
-    };
-  }
-  const backupFile = join(dirname(filename), `${basename(filename)}.${Math.random() * 10000}${extname(filename)}`);
-
-  // rename then copy preserves the file attributes when we restore.
-  await rename(filename, backupFile);
-  await copyFile(backupFile, filename);
-
-  return async () => {
-    await rmFile(filename);
-    await rename(backupFile, filename);
-  }
-}
 
 const debug = getArg("debug") == true;
 
@@ -166,6 +148,7 @@ async function main() {
     config.filesystem = resolve(config.filesystem || `${basefolder}/dist/static_modules.fs`);
     config.loader = config.loader || `${basefolder}/dist/static-loader.js`;
     if (!config.entrypoints) {
+
       config.entrypoints = new Array<string>();
       if (pkgJson.main) {
         if (typeof pkgJson.main === 'string') {
@@ -177,20 +160,23 @@ async function main() {
             }
           } catch { }
         }
-        if (pkgJson.bin) {
-          if (typeof pkgJson.bin === 'string') {
-            config.entrypoints.push(pkgJson.bin);
-          } else {
-            for (const ep in pkgJson.bin) {
-              const entrypoint = pkgJson.bin[ep];
-              if (config.entrypoints.indexOf(entrypoint) == -1) {
-                config.entrypoints.push(entrypoint);
-              }
-            }
+      }
 
+      if (pkgJson.bin) {
+        if (typeof pkgJson.bin === 'string') {
+          if (config.entrypoints.indexOf(pkgJson.bin) == -1) {
+            config.entrypoints.push(pkgJson.bin);
+          }
+        } else {
+          for (const ep in pkgJson.bin) {
+            const entrypoint = pkgJson.bin[ep];
+            if (config.entrypoints.indexOf(entrypoint) == -1) {
+              config.entrypoints.push(entrypoint);
+            }
           }
         }
       }
+
     }
     if (!config.dependencies) {
       return help("packages to static link should be in 'static-link/dependencies' section");

@@ -5,7 +5,7 @@ import * as fs from 'fs'
 
 import { patchModuleLoader, IReadOnlySynchronousFileSystem, StaticFilesystem } from "../main"
 
-@suite class AsyncIO {
+@suite class PatchModuleLoader {
   @test async "Ensure that you can't use require on a false file"() {
     assert.throws(() => require("/foo/bar"));
   }

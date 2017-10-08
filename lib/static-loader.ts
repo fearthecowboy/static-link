@@ -135,7 +135,7 @@ export function load(staticModule: string) {
   if (!(<any>require).undo) {
     const svs = new StaticFilesystem();
     // first patch the require 
-    (<any>require).undo = patchModuleLoader(svs, true);
+    (<any>require).undo = patchModuleLoader(svs);
     (<any>require).staticfilesystem = svs;
 
     // hot-patch process.exit so that when it's called we shutdown the patcher early

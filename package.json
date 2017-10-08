@@ -4,9 +4,8 @@
   "description": "This utility provides a means to statically-link all your dependencies into a single static-filesystem that is patched into node's module loader.",
   "main": "main.js",
   "scripts": {
-    "test": "tsc && mocha dist/test",
+    "test": "tsc && node ./.scripts/rewrite-loader.js && mocha dist/test --timeout 200000",
     "start": "node dist/app",
-    "watch": "tsc -p . -w",
     "compile": "tsc  && node ./.scripts/rewrite-loader.js && uglifyjs --beautify \"beautify=true,indent_level=2\" ./dist/lib/static-loader.js -o ./dist/lib/static-loader.js",
     "_prepare": "tsc  && node ./.scripts/rewrite-loader.js && uglifyjs -c ./dist/lib/static-loader.js -o ./dist/lib/static-loader.js",
     "restore": "shx rm package-lock.json && shx rm -rf ./node_modules/ && npm install",
@@ -40,6 +39,8 @@
     "mocha": "3.4.2",
     "mocha-typescript": "^1.1.7",
     "shx": "^0.2.2",
+    "shelljs": "^0.7.8",
+    "@types/shelljs": "0.7.4",
     "source-map-support": "0.4.15",
     "typescript": "2.5.2",
     "yarn": "^1.1.0"

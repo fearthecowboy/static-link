@@ -33,12 +33,12 @@ function unixifyVolume(volume: IReadOnlySynchronousFileSystem): IReadOnlySynchro
   } : volume;
 }
 
-export function patchModuleLoader(volume: IReadOnlySynchronousFileSystem, enablePathNormalization = false, Module: IModule = require('module')): () => void {
+export function patchModuleLoader(volume: IReadOnlySynchronousFileSystem, enablePathNormalization: boolean = false, enableFallback: boolean = true, Module: IModule = require('module')): () => void {
   const backup = { ...Module };
   const preserveSymlinks = false;
   const statcache = {};
   const packageMainCache = {};
-
+  Module._fallback = enableFallback;
   if (enablePathNormalization) {
     volume = unixifyVolume(volume);
   }
@@ -145,12 +145,13 @@ export function patchModuleLoader(volume: IReadOnlySynchronousFileSystem, enable
     }
   };
 
+  Module._originalFindPath = Module._findPath;
+
   Module._findPath = (request: string, paths: Array<string>, isMain: boolean): string | false => {
     const result = Module._alternateFindPath(request, paths, isMain);
     return (!result && Module._fallback) ? Module._originalFindPath(request, paths, isMain) : result;
   }
 
-  Module._originalFindPath = Module._findPath;
   Module._alternateFindPath = (request: string, paths: Array<string>, isMain: boolean): string | false => {
     if (!request) {
       return false;
