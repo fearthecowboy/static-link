@@ -177,7 +177,7 @@ export function patchFilesystem(volume: IFileSystem, original: IFileSystem = fs)
     switch (metadata[member]) {
       case MemberType.Constructor:
         // bind as a constuctor
-        original[member].bind(null, volume);
+        original[member] = volume[member].bind(null, volume);
         break;
 
       case MemberType.Property:
@@ -187,7 +187,7 @@ export function patchFilesystem(volume: IFileSystem, original: IFileSystem = fs)
 
       default:
         // bind as a method
-        original[member].bind(volume);
+        original[member] = volume[member].bind(volume);
         break
     }
   }

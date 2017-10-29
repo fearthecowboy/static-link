@@ -1,12 +1,12 @@
 {
   "name": "static-link",
-  "version": "0.1.6",
+  "version": "0.2.0",
   "description": "This utility provides a means to statically-link all your dependencies into a single static-filesystem that is patched into node's module loader.",
   "main": "main.js",
   "scripts": {
     "test": "tsc && node ./.scripts/rewrite-loader.js &&  uglifyjs ./dist/lib/static-loader.js -c -o ./dist/lib/static-loader.js && mocha dist/test --timeout 200000",
     "start": "node dist/app",
-    "compile": "tsc  && node ./.scripts/rewrite-loader.js && uglifyjs --beautify \"beautify=true,indent_level=2\" ./dist/lib/static-loader.js -o ./dist/lib/static-loader.js",
+    "compile": "tsc  && node ./.scripts/rewrite-loader.js && uglifyjs --beautify \"beautify=true,indent_level=2\" ./dist/lib/static-loader.js -o ./dist/lib/static-loader.js && shx cp node_modules/yarn/lib/* ./dist",
     "_prepare": "tsc  && node ./.scripts/rewrite-loader.js && uglifyjs -c ./dist/lib/static-loader.js -o ./dist/lib/static-loader.js",
     "restore": "shx rm package-lock.json && shx rm -rf ./node_modules/ && npm install",
     "clean": "shx rm -rf dist",
@@ -49,7 +49,7 @@
     "@types/shelljs": "0.7.4",
     "source-map-support": "0.4.15",
     "typescript": "2.5.2",
-    "yarn": "^1.1.0"
+    "yarn": "^1.2.1"
   },
   "dependencies": {}
 }

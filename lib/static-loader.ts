@@ -6,7 +6,7 @@
 import * as fs from 'fs'
 import { patchModuleLoader } from "./patch-moduleloader";
 import { StaticFilesystem } from "./static-filesystem";
-import { patchFilesystem } from "./patch-filesystem";
+import { patchFilesystem, IFileSystem } from "./patch-filesystem";
 import { select } from "./common";
 import { resolve } from 'path';
 import { realpathSync } from 'fs';
@@ -134,12 +134,33 @@ export function list(staticModule: string) {
   svs.shutdown();
 }
 
+function existsInFs(svs: StaticFilesystem, filePath: string): boolean {
+  try {
+    return svs.statSync(filePath) ? true : false;
+  } catch { }
+  return false;
+}
+
 export function load(staticModule: string) {
-  if (!(<any>require).undo) {
+  if (!((<any>global).staticloader)) {
+    (<any>global).staticloader = {};
     const svs = new StaticFilesystem();
     // first patch the require 
-    (<any>require).undo = patchModuleLoader(svs);
-    (<any>require).staticfilesystem = svs;
+    const undo_loader = patchModuleLoader(svs);
+    const fsRFS = fs.readFileSync;
+    const undo_fs = patchFilesystem(<IFileSystem><any>{
+      readFileSync: (path, options): string | Buffer => {
+        try {
+          if (svs.statSync(path)) {
+            return svs.readFileSync(path, options);
+          }
+        } catch {
+        }
+        return fsRFS(path, options);
+      }
+    });
+    ((<any>global).staticloader).undo = () => { undo_fs(); undo_loader(); };
+    ((<any>global).staticloader).staticfilesystem = svs;
 
     // hot-patch process.exit so that when it's called we shutdown the patcher early
     // can't just use the event because it's not early enough
@@ -149,7 +170,7 @@ export function load(staticModule: string) {
       svs.shutdown();
 
       // remove the patching
-      (<any>require).undo();
+      ((<any>global).staticloader).undo();
 
       // keep going
       return process_exit(n);
@@ -164,7 +185,8 @@ export function load(staticModule: string) {
 
     // hot-patch fork so we can make child processes work too.
     (<any>child_process).fork = (modulePath: string, args?: string[], options?: child_process.ForkOptions): child_process.ChildProcess => {
-      if (args) {
+
+      if (args && existsInFs(svs, modulePath)) {
         return fork(__filename, [...getInsertedArgs(svs.loadedFileSystems), modulePath, ...Array.isArray(args) ? args : [args]], options)
       } else {
         return fork(__filename, args, options);
@@ -173,14 +195,14 @@ export function load(staticModule: string) {
 
     // hot-patch spawn so we can patch if you're actually calling node.
     (<any>child_process).spawn = (command: string, args?: string[], options?: child_process.SpawnOptions): child_process.ChildProcess => {
-      if (args && (Array.isArray(args) || typeof args !== 'object') && isNode(command)) {
+      if (args && (Array.isArray(args) || typeof args !== 'object') && isNode(command) && existsInFs(svs, args[0])) {
         return (<any>spawn)(command, [__filename, ...getInsertedArgs(svs.loadedFileSystems), ...Array.isArray(args) ? args : [args]], options);
       }
       return (<any>spawn)(command, args, options);
     }
 
     (<any>child_process).spawnSync = (command: string, args?: string[], options?: child_process.SpawnOptions): child_process.ChildProcess => {
-      if (args && (Array.isArray(args) || typeof args !== 'object') && isNode(command)) {
+      if (args && (Array.isArray(args) || typeof args !== 'object') && isNode(command) && existsInFs(svs, args[0])) {
         return (<any>spawnSync)(command, [__filename, ...getInsertedArgs(svs.loadedFileSystems), ...Array.isArray(args) ? args : [args]], options);
       }
       return (<any>spawnSync)(command, args, options);
@@ -204,12 +226,12 @@ export function load(staticModule: string) {
       return (<any>execSync)(command, options);
     }
   }
-  (<any>require).staticfilesystem.load(staticModule);
+  ((<any>global).staticloader).staticfilesystem.load(staticModule);
 }
 
 export function unload(staticModule: string) {
-  if ((<any>require).undo) {
-    const svs = (<StaticFilesystem>((<any>require).staticfilesystem));
+  if (((<any>global).staticloader).undo) {
+    const svs = (<StaticFilesystem>(((<any>global).staticloader).staticfilesystem));
     svs.unload(staticModule);
   }
 }

@@ -5,7 +5,7 @@ export const isWindows = process.platform === 'win32';
 
 import { dirname, normalize, join, resolve, basename, extname } from 'path';
 import { constants } from 'os';
-import { exec, ExecOptions, ChildProcess } from "child_process";
+import { spawn, SpawnOptions, ChildProcess } from "child_process";
 
 import * as filesystem from 'fs';
 
@@ -37,11 +37,14 @@ export function read(fd: number, buffer: Buffer, offset: number, length: number,
 export function readFile(path: filesystem.PathLike, options?: { encoding?: string | null; flag?: string; }): Promise<string | Buffer> {
   return new Promise((r, j) => fs.readFile(path, options, (err, data) => err ? j(err) : r(data)));
 }
-export function execute(command: string, options: ExecOptions): Promise<{ stdout: string, stderr: string, error: Error | null, code: number }> {
+export function execute(command: string, cmdlineargs: string[], options: SpawnOptions): Promise<{ stdout: string, stderr: string, error: Error | null, code: number }> {
   return new Promise((r, j) => {
-    exec(command, options, (error, stdout, stderr) => {
-      r({ stdout: stdout, stderr: stderr, error: error, code: error ? (<any>error).code : 0 });
-    });
+    const cp = spawn(command, cmdlineargs, { ...options, stdio: "pipe" });
+    let err = "";
+    let out = "";
+    cp.stderr.on("data", (chunk) => { err += chunk; process.stdout.write('.'); });
+    cp.stdout.on("data", (chunk) => { out += chunk; process.stdout.write('.'); });
+    cp.on("close", (code, signal) => r({ stdout: out, stderr: err, error: code ? new Error("Process Failed.") : null, code: code }));
   });
 }
 function fs_mkdir(path: string | Buffer): Promise<void> {
@@ -87,6 +90,28 @@ export async function copyFile(source: string, target: string): Promise<void> {
     rd.pipe(wr);
   });
 }
+
+export async function copyFolder(source: string, target: string, all?: Array<Promise<void>>): Promise<void> {
+  const waitAtEnd = all ? false : true;
+  all = all || new Array<Promise<void>>();
+
+  if (isDirectory(source)) {
+    for (const each of await readdir(source)) {
+      const sp = join(source, each);
+      const dp = join(target, each);
+
+      if (await isDirectory(sp)) {
+        copyFolder(sp, dp, all);
+      } else {
+        all.push(copyFile(sp, dp));
+      }
+    }
+  }
+  if (waitAtEnd) {
+    await Promise.all(all);
+  }
+};
+
 export const exists: (path: string | Buffer) => Promise<boolean> = path => new Promise<boolean>((r, j) => fs.stat(path, (err: NodeJS.ErrnoException, stats: filesystem.Stats) => err ? r(false) : r(true)));
 
 export async function isDirectory(dirPath: string): Promise<boolean> {

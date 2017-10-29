@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { stat, execute, calculateHash, isFile, isDirectory, mkdir, rmdir, rmFile, rename, writeFile, copyFile, readFile, backup } from "./lib/common";
+import { stat, execute, calculateHash, isFile, isDirectory, mkdir, rmdir, rmFile, rename, writeFile, copyFile, copyFolder, readFile, backup } from "./lib/common";
 import { resolve, dirname, join, basename, extname, relative } from "path";
 import { mkdtempSync, rmdirSync, unlinkSync } from "fs"
 import { tmpdir } from 'os';
@@ -55,7 +55,7 @@ interface Package {
     doc?: string;
     example?: string;
   };
-  scripts: {
+  scripts?: {
     test?: string; // [a-zA-Z]
   };
   dependencies: Map<string, string>;
@@ -72,14 +72,13 @@ interface StaticLinkConfiguration {
   loader?: string;
   entrypoints?: Array<string>;
   dependencies?: Map<string, string>;
+  patch?: string;
 }
 
 async function yarnInstall(directory: string, pkgs: Array<string>) {
-  const c = `${__dirname}/../node_modules/yarn/bin/yarn add --json ${pkgs.map((a) => `"${a}"`).join(' ')}`;
-  if (debug) {
-    console.log(c);
-  }
-  const output = await execute(c, { cwd: directory });
+  delete process.env["npm_config_cafile"];
+
+  const output = await execute(process.execPath, [`${__dirname}/cli`, "--no-node-version-check", "--no-lockfile", "add", ...pkgs], { cwd: directory });
   if (debug) {
     console.log(output.stdout);
   }
@@ -87,13 +86,7 @@ async function yarnInstall(directory: string, pkgs: Array<string>) {
     throw Error(`Failed to install package '${pkgs}' -- ${output.error}`);
   }
 }
-async function npmInstall(directory: string, pkg: string) {
-  const output = await execute(`${__dirname}/../node_modules/yarn/bin/yarn add --json "${pkg}"`, { cwd: directory });
 
-  if (output.error) {
-    throw Error(`Failed to install package '${pkg}' -- ${output.error}`);
-  }
-}
 
 function getArg(arg: string): boolean | string | undefined {
   const match = `--${arg}`
@@ -139,6 +132,10 @@ async function main() {
 
   try {
     const pkgJson = <Package>require(pkgfile);
+
+    // make sure we don't run any scripts during this process.
+    pkgJson.scripts = undefined;
+    await writeFile(pkgfile, JSON.stringify(pkgJson, null, "  "));
 
     const config = pkgJson["static-link"];
     if (!config) {
@@ -254,7 +251,6 @@ async function main() {
 
     // install packages
     try {
-      const all = new Array<any>();
       const set = new Array<string>();
 
       for (const pkg in config.dependencies) {
@@ -262,9 +258,15 @@ async function main() {
         console.log(`> Installing static dependency ${pkg}@${version} `)
         set.push(`${pkg}@${version}`)
       }
-      all.push(yarnInstall(workingdir, set));
-      all.push(yarnInstall(basefolder, set));
-      await Promise.all(all);
+
+      await yarnInstall(workingdir, set);
+      if (config.patch) {
+        const pwd = process.cwd();
+        process.chdir(workingdir)
+        eval(config.patch);
+        process.chdir(pwd);
+      }
+      await copyFolder(resolve(workingdir, "node_modules"), resolve(basefolder, "node_modules"));
 
       // we've installed everything
       // let's pack up the file
