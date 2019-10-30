@@ -14,3 +14,4 @@ tsconfig.json
 !dist/*.d.ts
 !dist/lib/*.d.ts
 .scripts/
+olddist/

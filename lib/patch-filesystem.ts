@@ -164,20 +164,29 @@ const metadata = {
   X_OK: MemberType.Property,
 };
 
-export function patchFilesystem(volume: IFileSystem, original: IFileSystem = fs): () => void {
+export function patchFilesystem(volume: IFileSystem, original: IFileSystem = <any>fs): () => void {
 
   // create a backup before modification
   const backup = { ...original };
 
   // iterate over the filesystem and patch members
   for (const member of Object.getOwnPropertyNames(original)) {
+    if (!volume[member] || member === "SyncWriteStream") {
+      // skip if the filesystem doesn't have the item
+      // and blacklist the SWS -- it's deprecated.
+      continue;
+    }
     if (typeof volume[member] !== typeof original[member]) {
       continue;
     }
     switch (metadata[member]) {
       case MemberType.Constructor:
         // bind as a constuctor
-        original[member] = volume[member].bind(null, volume);
+        try {
+          original[member] = volume[member].bind(null, volume);
+        } catch {
+          // hmm.
+        }
         break;
 
       case MemberType.Property:
@@ -187,11 +196,15 @@ export function patchFilesystem(volume: IFileSystem, original: IFileSystem = fs)
 
       default:
         // bind as a method
-        original[member] = volume[member].bind(volume);
+        try {
+          original[member] = volume[member].bind(volume);
+        } catch {
+          // hmm.
+        }
         break
     }
   }
 
   // return a delegate to undo those changes.
-  return () => patchFilesystem(fs, backup);
+  return () => patchFilesystem(<any>fs, backup);
 }

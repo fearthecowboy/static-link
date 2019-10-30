@@ -10,7 +10,7 @@ interface FileDefinition {
 export class StaticFilesystemCreator {
   private index = new Array<FileDefinition>();
   private hash?: string;
-  private hashBuffer: Buffer;
+  private hashBuffer!: Buffer;
 
   public constructor() {
 

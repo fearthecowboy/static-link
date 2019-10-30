@@ -14,7 +14,7 @@ import { patchModuleLoader, IReadOnlySynchronousFileSystem, StaticFilesystem } f
   @test async "Does patchModuleLoader work"() {
     const undo = patchModuleLoader({
       readFileSync: (path: string, options?: { encoding?: string | null; flag?: string; } | string | null): string | Buffer => {
-        if (path === '/foo/bar.js') {
+        if (path === '/foo/bar.js' || path === '/foo/nobar.js') {
           return "module.exports = 100";
         }
         throw new Error();
@@ -23,7 +23,7 @@ import { patchModuleLoader, IReadOnlySynchronousFileSystem, StaticFilesystem } f
         return path;
       },
       statSync: (path: string): fs.Stats => {
-        if (path === '/foo/bar.js') {
+        if (path === '/foo/bar.js' || path === '/foo/nobar.js') {
           return <fs.Stats><any>{
             ...fs.statSync(__filename),
 
@@ -42,14 +42,18 @@ import { patchModuleLoader, IReadOnlySynchronousFileSystem, StaticFilesystem } f
       }
     }, true);
 
-    const value = require("/foo/bar");
+    // have to use a different file here because caching
+    const value = require("/foo/nobar");
     undo();
 
     assert.equal(value, 100, "Able to do simple patchModuleLoader");
+
+    // have to use a different file here because caching
     assert.throws(() => require("/foo/bar"));
   }
 
   @test async "Ensure that you can't use require on a false file after last test"() {
+    // have to use a different file here because caching
     assert.throws(() => require("/foo/bar"));
   }
 

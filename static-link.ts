@@ -108,11 +108,12 @@ function getArg(arg: string): boolean | string | undefined {
 
 
 const debug = getArg("debug") == true;
+const noModules = getArg("no-node-modules") == true;
 
 async function main() {
   // load package.json
 
-  const pkgfile = resolve(getArg("input") || "./package.json");
+  const pkgfile = resolve(<string>getArg("input") || "./package.json");
   const force = getArg("force") == true;
 
 
@@ -266,7 +267,13 @@ async function main() {
         eval(config.patch);
         process.chdir(pwd);
       }
-      await copyFolder(resolve(workingdir, "node_modules"), resolve(basefolder, "node_modules"));
+      if (!noModules) {
+        console.log(`> Copying temporary node_modules into local install`);
+        await copyFolder(resolve(workingdir, "node_modules"), resolve(basefolder, "node_modules"));
+      }
+      else {
+        console.log(`> Skipping temporary node_modules (You should be using equivalent devDependencies)`);
+      }
 
       // we've installed everything
       // let's pack up the file
@@ -281,7 +288,9 @@ async function main() {
 
   }
   catch (err) {
-    return help(err);
+    help(err);
+    await restorePkgFile();
+    process.exit(1);
   }
   finally {
     await Promise.all(minorTasks);

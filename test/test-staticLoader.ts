@@ -67,11 +67,11 @@ module.exports.doIt = doIt;
 `);
 
       // run npm install
-      const output = await execute(`npm.cmd`, [`install`], { cwd: workingdir });
+      const output = await execute(`npm`, [`install`], { cwd: workingdir });
       assert.equal(output.error || null, null, `npm install failed ${output.stdout}`);
 
       // run npm run static-link
-      const slink = await execute(`npm.cmd`, [`run`, `static-link`], { cwd: workingdir });
+      const slink = await execute(`npm`, [`run`, `static-link`], { cwd: workingdir });
       //console.log(slink.stdout);
       //console.log(slink.stderr);
       assert.equal(slink.error || null, null, `npm run static-link failed ${slink.stdout}`);

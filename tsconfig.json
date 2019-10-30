@@ -15,10 +15,11 @@
     "noEmitHelpers": false,
     "target": "es2017",
     "types": [
-      "node"
+      "node",
+      "mocha"
     ],
     "lib": [
-      "esnext"
+      "es2017"
     ],
     "experimentalDecorators": true,
     "newLine": "LF"

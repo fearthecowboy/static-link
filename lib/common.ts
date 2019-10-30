@@ -112,7 +112,7 @@ export async function copyFolder(source: string, target: string, all?: Array<Pro
   }
 };
 
-export const exists: (path: string | Buffer) => Promise<boolean> = path => new Promise<boolean>((r, j) => fs.stat(path, (err: NodeJS.ErrnoException, stats: filesystem.Stats) => err ? r(false) : r(true)));
+export const exists: (path: string | Buffer) => Promise<boolean> = path => new Promise<boolean>((r, j) => fs.stat(path, (err: NodeJS.ErrnoException | null, stats: filesystem.Stats) => err ? r(false) : r(true)));
 
 export async function isDirectory(dirPath: string): Promise<boolean> {
   try {
@@ -300,10 +300,20 @@ export function first<T, V>(array: Array<V>, selector: (current: V) => T | undef
 
 
 export async function backup(filename: string): Promise<() => void> {
+  let tried = false;
   if (!await isFile(filename)) {
     // file doesn't exists, doesn't need restoring.
     return async () => {
-      await rmFile(filename);
+      if (!tried) {
+        tried = true;
+        try {
+          await rmFile(filename);
+        }
+        catch {
+          // oh well.
+        }
+      }
+
     };
   }
   const backupFile = join(dirname(filename), `${basename(filename)}.${Math.random() * 10000}${extname(filename)}`);
@@ -313,7 +323,20 @@ export async function backup(filename: string): Promise<() => void> {
   await copyFile(backupFile, filename);
 
   return async () => {
-    await rmFile(filename);
-    await rename(backupFile, filename);
+    if (!tried) {
+      tried = true;
+      try {
+        await rmFile(filename);
+      }
+      catch {
+        // oh well.
+      }
+      try {
+        await rename(backupFile, filename);
+      }
+      catch {
+        // oh well.
+      }
+    }
   }
 }

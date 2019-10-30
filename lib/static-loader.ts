@@ -50,6 +50,12 @@ function isNode(path: string): boolean {
   return possibilities.indexOf(path) > -1 ? true : false;
 }
 
+function cmdlineToArray(text: string, result = new Array<string>(), matcher = /[^\s"]+|"([^"]*)"/gi, count = 0) {
+  text = text.replace(/\\"/g, "\ufffe");
+  const match = matcher.exec(text);
+  return match ? cmdlineToArray(text, result, matcher, result.push(match[1] ? match[1].replace(/\ufffe/g, '\\"') : match[0].replace(/\ufffe/g, '\\"'))) : result;
+}
+
 function indexAfterStartsWith(command: string, text: string): number {
   return command.startsWith(text) ? text.length : -1;
 }
@@ -185,11 +191,10 @@ export function load(staticModule: string) {
 
     // hot-patch fork so we can make child processes work too.
     (<any>child_process).fork = (modulePath: string, args?: string[], options?: child_process.ForkOptions): child_process.ChildProcess => {
-
       if (args && existsInFs(svs, modulePath)) {
         return fork(__filename, [...getInsertedArgs(svs.loadedFileSystems), modulePath, ...Array.isArray(args) ? args : [args]], options)
       } else {
-        return fork(__filename, args, options);
+        return fork(modulePath, args, options);
       }
     }
 
@@ -210,7 +215,7 @@ export function load(staticModule: string) {
 
     (<any>child_process).exec = (command: string, options, callback): child_process.ChildProcess => {
       const pos = startsWithNode(command);
-      if (pos > -1) {
+      if (pos > -1 && existsInFs(svs, cmdlineToArray(command)[1])) {
         return (<any>exec)(`${command.substring(0, pos)} "${__filename}" ${getInsertedArgString(svs.loadedFileSystems)} ${command.substring(pos)}`, options, callback);
       }
       // console.log(`exec ${command} ${JSON.stringify({ options }, null, "  ")}`);
@@ -219,7 +224,7 @@ export function load(staticModule: string) {
 
     (<any>child_process).execSync = (command: string, options): child_process.ChildProcess => {
       const pos = startsWithNode(command);
-      if (pos > -1) {
+      if (pos > -1 && existsInFs(svs, cmdlineToArray(command)[1])) {
         return (<any>execSync)(`${command.substring(0, pos)} "${__filename}" ${getInsertedArgString(svs.loadedFileSystems)} ${command.substring(pos)}`, options);
       }
       // console.log(`execSync ${command} ${JSON.stringify({ options }, null, "  ")}`);
@@ -235,4 +240,4 @@ export function unload(staticModule: string) {
     svs.unload(staticModule);
   }
 }
-// @impls 
+// @impls
